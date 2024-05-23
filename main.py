@@ -1,48 +1,53 @@
 from tkinter import *
-import threading
 
 FONT_NAME = 'Courier'
 session_time_list = ['1 Minutes', '2 Minutes', '3 Minutes', '4 Minutes', '5 Minutes']
-start_session = False
-
-text = ""
 update_timer = None
-
+clear_timer = None
+remaining_time = 0
+session_minutes = None
 
 def handle_key_press(event):
-    global text, update_timer, start_session
-    start_session = True
-    session()
-    if update_timer:
-        window.after_cancel(update_timer)
+    global clear_timer
+    if clear_timer:
+        window.after_cancel(clear_timer)
 
     text = typing_text.get(1.0, "end-1c")
     word_count.config(text=f"{len(text.split())} Words")
 
-    update_timer = window.after(5000, clear_text)
-
-    if not start_session:
-        threading.Thread(target=count_time).start()
-        start_session = True
+    clear_timer = window.after(5000, clear_text)
 
 
 def clear_text():
     typing_text.delete(1.0, "end-1c")
-    word_count.config(text=f"0 Words")
+    word_count.config(text="0 Words")
 
 
-def count_time(session_time):
-    session_time = int(("{}".format(value_inside.get()))[0])*60
-    if session_time > -1:
-        window.after(1000, count_time, session_time - 1)
+def start_session():
+    typing_text.config(state="normal")
+    global remaining_time, session_minutes
+    session_minutes = int(value_inside.get().split()[0])
+    remaining_time = session_minutes * 60
+    update_timer_display()
+
+
+def update_timer_display():
+    global remaining_time, update_timer
+    minutes = remaining_time // 60
+    seconds = remaining_time % 60
+    timer_label.config(text=f"{minutes:02}:{seconds:02}")
+    time = int(value_inside.get().split()[0])
+
+    if remaining_time > 0:
+        remaining_time -= 1
+        update_timer = window.after(1000, update_timer_display)
     else:
-        typing_text.config(state="disabled")
+        words = typing_text.get(1.0, "end-1c")
+        words_count = len(words.split())
 
-
-def session():
-    while start_session:
-        session_time = int(("{}".format(value_inside.get()))[0])
-        window.after(session_time*60000)  # begin updates
+        typing_text.delete(1.0, "end-1c")
+        typing_text.insert(INSERT, f"Your Typing Speed is {words_count/time} words per minutes.")
+        typing_text.config(fg='red', state="disabled")
 
 
 window = Tk()
@@ -53,7 +58,7 @@ Label(text='Most Dangerous Writing App', bg='#987dbd', fg='white', font=(FONT_NA
     row=0, column=1, columnspan=2)
 
 # -------Session Length Dropdown----
-Label(text='Session Length: ', bg='#987dbd', fg='white', font=(FONT_NAME, 12), padx=250).grid(sticky=W, row=1, column=0,
+Label(text='Session Length: ', bg='#987dbd', fg='white', font=(FONT_NAME, 12), padx=150).grid(sticky=W, row=1, column=0,
                                                                                               columnspan=2)
 value_inside = StringVar()
 value_inside.set('1 Minutes')
@@ -62,14 +67,22 @@ dropdown = OptionMenu(window, value_inside, *session_time_list)
 dropdown.config(width=10, padx=5, pady=5, bg='#987dbd', fg='white', highlightthickness=0)
 dropdown.grid(row=1, column=1, columnspan=2)
 
+# -------Start Button-----------
+start_button = Button(text="Start Session", command=start_session, bg='#987dbd', fg='white', font=(FONT_NAME, 12))
+start_button.grid(row=1, column=3, padx=10)
+
 # -------Typing Textbox-----------
 typing_text = Text(width=50, height=10, bg='#401e6e', fg="white", highlightthickness=2, font=("Arial", 24))
-typing_text.grid(row=2, column=1, columnspan=2)
+typing_text.grid(row=2, column=1, columnspan=3)
 typing_text.bind("<Key>", handle_key_press)
+typing_text.config(state="disabled")
 
 # ---------Word Count----
-word_count = (Label(text='0 Words', bg='#987dbd', fg='white', font=(FONT_NAME, 12), padx=250))
-word_count.grid(sticky=W, row=3, column=1, )
+word_count = Label(text='0 Words', bg='#987dbd', fg='white', font=(FONT_NAME, 12), padx=250)
+word_count.grid(sticky=W, row=3, column=1, columnspan=2)
 
+# ---------Timer Label----
+timer_label = Label(text="00:00", bg='#987dbd', fg='white', font=(FONT_NAME, 12))
+timer_label.grid(row=3, column=3, padx=10)
 
 window.mainloop()
