@@ -7,6 +7,7 @@ clear_timer = None
 remaining_time = 0
 session_minutes = None
 
+
 def handle_key_press(event):
     global clear_timer
     if clear_timer:
